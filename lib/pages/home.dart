@@ -16,15 +16,19 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   //reference the box
   final mybox = Hive.box('notes');
-
+  List foundToDo = [];
+  List done = [];
+  List notdone = [];
   ToDoClass db = ToDoClass();
-  TextEditingController t1 = TextEditingController();
-  List remain = ["", false];
-  List history = ["", true];
+  TextEditingController title = TextEditingController();
+  TextEditingController subtitle = TextEditingController();
+  TextEditingController search = TextEditingController();
 
   void onchanged(bool? value, int index) {
     setState(() {
-      db.tododata[index][1] = !db.tododata[index][1];
+      notdone[index][1] = !notdone[index][1];
+      db.tododata[index][1] = notdone[index][1];
+      print(notdone);
       db.UpdatData();
     });
   }
@@ -35,18 +39,19 @@ class _HomeScreenState extends State<HomeScreen> {
         context: context,
         builder: (context) {
           return DialogBox(
-            t1: t1,
+            t1: title,
             submit: () {
               print("submit");
               setState(() {
-                db.tododata.add([t1.text, false]);
+                db.tododata.add([title.text, false]);
+                notdone.add([title.text, false]);
                 db.UpdatData();
-                t1.clear();
+                title.clear();
               });
               Navigator.pop(context);
             },
             cancel: () {
-              t1.clear();
+              title.clear();
               Navigator.pop(context);
               print("cancel");
             },
@@ -58,36 +63,60 @@ class _HomeScreenState extends State<HomeScreen> {
   void deletetask(int index) {
     setState(() {
       db.tododata.removeAt(index);
+      notdone.removeAt(index);
     });
     db.UpdatData();
   }
 
+  void _search(String searchTerm) {
+    List resultsList = [];
+    resultsList.clear();
+    if (searchTerm.isEmpty) {
+      resultsList = notdone;
+    } else {
+      for (var item in notdone) {
+        if (item[0].toLowerCase().contains(searchTerm.toLowerCase())) {
+          resultsList.add(item);
+        }
+      }
+    }
+    setState(() {
+      foundToDo = resultsList;
+      print(foundToDo);
+    });
+  }
+
   @override
   void initState() {
-    // if this is the 1st time to ever to open in the app,them create default data
     if (mybox.get('key') == null) {
       db.createInitailData();
     } else {
       db.loadData();
-      for (var i in db.tododata) {
-        print(i[0].toString() + " " + i[1].toString());
-        if (i[1] == true) {
-          history.add((i[0], i[1]));
-          // print('hsitory');
+      for (var item in db.tododata) {
+        if (item[1]) {
+          done.add(item);
         } else {
-          remain.add((i[0], i[1]));
-          // print('remain');
+          notdone.add(item);
         }
       }
-      print(remain.length.toString() + " " + history.length.toString());
-      // print(history.length);
+      setState(() {
+        foundToDo = notdone;
+      });
+    }
+
+    if (mybox.get('his') == null) {
+      db.createInitailData();
+    } else {
+      db.loadHisData();
     }
     super.initState();
   }
 
   @override
   void dispose() {
-    t1.dispose();
+    title.dispose();
+    subtitle.dispose();
+    search.dispose();
     super.dispose();
   }
 
@@ -98,17 +127,91 @@ class _HomeScreenState extends State<HomeScreen> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          TopSection(),
+          //top section start here
+          Container(
+            padding: EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              border: Border.all(
+                width: 1.5,
+                color: Colors.white.withOpacity(0.2),
+              ),
+              gradient: LinearGradient(
+                colors: [
+                  Colors.white.withOpacity(0.9),
+                  Colors.white.withOpacity(0.6),
+                ],
+                begin: AlignmentDirectional.topCenter,
+                end: AlignmentDirectional.bottomEnd,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                //titlebar
+                TitleText(
+                    title: 'Welcome Back ',
+                    subtitle: 'let\'s see what To Do. '),
+                //title bar end here
+                const SizedBox(height: 30),
+                //searchbar start here
+                Container(
+                  decoration: const BoxDecoration(
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0x0A000000),
+                        blurRadius: 32,
+                        offset: Offset(0, 16),
+                        spreadRadius: 0,
+                      )
+                    ],
+                  ),
+                  child: TextField(
+                    onChanged: (value) => _search(value),
+                    controller: search,
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white,
+                      border: OutlineInputBorder(
+                        borderSide: BorderSide.none,
+                        borderRadius: BorderRadius.circular(32),
+                      ),
+                      hintText: 'Start searching here...',
+                      prefixIcon: const Icon(Icons.search),
+                      suffixIcon: const Icon(
+                        Icons.filter_alt_rounded,
+                        color: blue,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+                //searchBar End here
+                const SizedBox(height: 30),
+                //task title start here
+                Text(
+                  "To Do",
+                  style: const TextStyle(
+                    color: Color(0xFF0D0D0D),
+                    fontSize: 30,
+                    fontFamily: 'DM Sans',
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.48,
+                  ),
+                ),
+                //task title end here
+              ],
+            ),
+          ),
           //list start here
           Container(
             child: Expanded(
               child: ListView.builder(
-                itemCount: db.tododata.length,
+                itemCount: foundToDo.length,
                 itemBuilder: ((context, index) {
                   return TodoTile(
                     onPressed: (context) => deletetask(index),
-                    text: db.tododata[index][0],
-                    checked: db.tododata[index][1],
+                    text: foundToDo[index][0],
+                    checked: foundToDo[index][1],
                     onChanged: (value) => onchanged(value, index),
                   );
                 }),
@@ -124,88 +227,6 @@ class _HomeScreenState extends State<HomeScreen> {
           Icons.add,
           color: Colors.white,
         ),
-      ),
-    );
-  }
-}
-
-class TopSection extends StatelessWidget {
-  const TopSection({
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        border: Border.all(
-          width: 1.5,
-          color: Colors.white.withOpacity(0.2),
-        ),
-        gradient: LinearGradient(
-          colors: [
-            Colors.white.withOpacity(0.9),
-            Colors.white.withOpacity(0.6),
-          ],
-          begin: AlignmentDirectional.topCenter,
-          end: AlignmentDirectional.bottomEnd,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          //titlebar
-          TitleText(
-              title: 'Welcome Back ', subtitle: 'let\'s see what To Do. '),
-          //title bar end here
-          const SizedBox(height: 30),
-          //searchbar start here
-          Container(
-            decoration: const BoxDecoration(
-              boxShadow: [
-                BoxShadow(
-                  color: Color(0x0A000000),
-                  blurRadius: 32,
-                  offset: Offset(0, 16),
-                  spreadRadius: 0,
-                )
-              ],
-            ),
-            child: TextField(
-              // controller: ,
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(32),
-                ),
-                hintText: 'Start searching here...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: const Icon(
-                  Icons.filter_alt_rounded,
-                  color: blue,
-                  size: 24,
-                ),
-              ),
-            ),
-          ),
-          //searchBar End here
-          const SizedBox(height: 30),
-          //task title start here
-          Text(
-            "To Do",
-            style: const TextStyle(
-              color: Color(0xFF0D0D0D),
-              fontSize: 30,
-              fontFamily: 'DM Sans',
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.48,
-            ),
-          ),
-          //task title end here
-        ],
       ),
     );
   }
