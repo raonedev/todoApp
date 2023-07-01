@@ -9,13 +9,7 @@ class ToDoClass {
   //run this method if this is the forst time ever opening this app
   void createInitailData() {
     tododata = [
-      ["swipe left to delete", true]
-    ];
-  }
-
-  void initialHistory() {
-    his = [
-      ["swipe left to delete", true]
+      ["swipe left to delete", true, "null", "null"]
     ];
   }
 
@@ -23,16 +17,8 @@ class ToDoClass {
     tododata = mybox.get('key');
   }
 
-  void loadHisData() {
-    his = mybox.get('his');
-  }
-
   void UpdatData() {
     mybox.put('key', tododata);
-    mybox.put('his', tododata);
-  }
-
-  void UpdatHisData() {
     mybox.put('his', tododata);
   }
 }

@@ -16,8 +16,7 @@ class DialogBox extends StatelessWidget {
         elevation: 0.0,
         child: Column(
           children: <Widget>[
-            InputField(hint: '',controller: t1,labeltext: "gym"),
-
+            InputField(hint: '',controller: t1,labeltext: "enter task"),
           ],
         ),
       ),

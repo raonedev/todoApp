@@ -8,44 +8,64 @@ class TodoTile extends StatelessWidget {
       required this.text,
       required this.checked,
       this.onChanged,
-      this.onPressed});
-  final String text;
+      this.onPressed,
+      required this.date,
+      required this.time, this.edit});
+
+  final String text, date, time;
   final bool checked;
   final void Function(BuildContext)? onPressed;
   final void Function(bool?)? onChanged;
+  final void Function(BuildContext)? edit;
+
   @override
   Widget build(BuildContext context) {
     return Slidable(
+      closeOnScroll: true,
       endActionPane: ActionPane(
         children: [
+          //edit
+          SlidableAction(
+            autoClose: true,
+            padding: EdgeInsets.symmetric(vertical: 15, horizontal: 0),
+            onPressed: edit,
+            icon: Icons.edit,
+            backgroundColor: Colors.blue,
+            borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(10), topLeft: Radius.circular(10)),
+          ),
+          //delete
           SlidableAction(
             padding: EdgeInsets.symmetric(vertical: 15, horizontal: 0),
             onPressed: onPressed,
             icon: Icons.delete,
             backgroundColor: red,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.only(
+                bottomRight: Radius.circular(10),
+                topRight: Radius.circular(10)),
           )
         ],
-        motion: StretchMotion(),
+        motion: DrawerMotion(),
       ),
-      child: Padding(
-        padding: const EdgeInsets.only(left: 10, right: 10, bottom: 20),
-        child: ListTile(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          tileColor: Colors.white,
-          leading: Checkbox(value: checked, onChanged: onChanged),
-          title: Text(
-            text,
-            style: TextStyle(
-                fontSize: 16,
-                color: black,
-                decoration:
-                    checked ? TextDecoration.lineThrough : TextDecoration.none),
-          ),
-          contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
+      child: ListTile(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        tileColor: Colors.white,
+        leading: Checkbox(value: checked, onChanged: onChanged),
+        title: Text(
+          text,
+          style: TextStyle(
+              fontSize: 16,
+              color: black,
+              decoration:
+                  checked ? TextDecoration.lineThrough : TextDecoration.none),
         ),
+        trailing: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(date),
+              Text(time, style: TextStyle(color: Colors.grey))
+            ]),
+        contentPadding: EdgeInsets.symmetric(vertical: 15, horizontal: 15),
       ),
     );
   }

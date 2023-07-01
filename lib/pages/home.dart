@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:hive/hive.dart';
 import '../data/database.dart';
 import '../wigets/dialogbox.dart';
@@ -13,22 +14,49 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderStateMixin{
   //reference the box
   final mybox = Hive.box('notes');
   List foundToDo = [];
   List done = [];
   List notdone = [];
+  DateTime _currentDate = DateTime.now();
   ToDoClass db = ToDoClass();
   TextEditingController title = TextEditingController();
   TextEditingController subtitle = TextEditingController();
   TextEditingController search = TextEditingController();
+  late TabController _tabController=TabController(vsync: this, length: 2);
 
+  int findIndexStrict(List list, String value) {
+    for (int i = 0; i < list.length; i++) {
+      if (list[i][0] == value) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  //ondelete history
+  void deletehis(int index){
+    print("index");
+    setState(() {
+      int temp = findIndexStrict(db.tododata, done[index][0]);
+      print(done);
+      db.tododata.removeAt(temp);
+      done.removeAt(index);
+      print(done);
+    });
+    db.UpdatData();
+  }
+  //checkedbox changed
   void onchanged(bool? value, int index) {
     setState(() {
-      notdone[index][1] = !notdone[index][1];
-      db.tododata[index][1] = notdone[index][1];
-      print(notdone);
+      int temp = findIndexStrict(db.tododata, foundToDo[index][0]);
+      print(temp);
+      print(db.tododata[temp][0]);
+      foundToDo[index][1] = !foundToDo[index][1];
+      db.tododata[temp][1]= foundToDo[index][1];
+      print(db.tododata);
       db.UpdatData();
     });
   }
@@ -43,11 +71,18 @@ class _HomeScreenState extends State<HomeScreen> {
             submit: () {
               print("submit");
               setState(() {
-                db.tododata.add([title.text, false]);
-                notdone.add([title.text, false]);
+                db.tododata.add([title.text,false,
+                  _currentDate.day.toString() +"/" +_currentDate.month.toString(),
+                  _currentDate.hour.toString() +"/" +_currentDate.minute.toString()
+                ]);
+                notdone.add([title.text,false,
+                  _currentDate.day.toString() +"/" +_currentDate.month.toString(),
+                  _currentDate.hour.toString() +":" +_currentDate.minute.toString()
+                ]);
                 db.UpdatData();
                 title.clear();
               });
+              print(notdone);
               Navigator.pop(context);
             },
             cancel: () {
@@ -68,6 +103,7 @@ class _HomeScreenState extends State<HomeScreen> {
     db.UpdatData();
   }
 
+  //searching a task
   void _search(String searchTerm) {
     List resultsList = [];
     resultsList.clear();
@@ -86,10 +122,40 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  //edit function
+  void edit(String? value, int index) {
+    title.clear();
+    title.text=value!;
+    showDialog(
+        context: context,
+        builder: (context) {
+          return DialogBox(
+            t1: title,
+            submit: () {
+              print("submit");
+              setState(() {
+                notdone[index][0] = title.text;
+                db.tododata[index][0] = title.text;
+                db.UpdatData();
+                title.clear();
+              });
+              print(notdone);
+              Navigator.pop(context);
+            },
+            cancel: () {
+              title.clear();
+              Navigator.pop(context);
+              print("cancel");
+            },
+          );
+        });
+  }
+
   @override
   void initState() {
     if (mybox.get('key') == null) {
       db.createInitailData();
+      foundToDo=db.tododata;
     } else {
       db.loadData();
       for (var item in db.tododata) {
@@ -100,14 +166,10 @@ class _HomeScreenState extends State<HomeScreen> {
         }
       }
       setState(() {
+        foundToDo.clear();
         foundToDo = notdone;
+        print(foundToDo);
       });
-    }
-
-    if (mybox.get('his') == null) {
-      db.createInitailData();
-    } else {
-      db.loadHisData();
     }
     super.initState();
   }
@@ -148,9 +210,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 //titlebar
-                TitleText(
-                    title: 'Welcome Back ',
-                    subtitle: 'let\'s see what To Do. '),
+                TitleText(title: 'Welcome Back ',subtitle: 'let\'s see what To Do. '),
                 //title bar end here
                 const SizedBox(height: 30),
                 //searchbar start here
@@ -188,14 +248,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 //searchBar End here
                 const SizedBox(height: 30),
                 //task title start here
-                Text(
-                  "To Do",
-                  style: const TextStyle(
-                    color: Color(0xFF0D0D0D),
-                    fontSize: 30,
-                    fontFamily: 'DM Sans',
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.48,
+                Container(
+                  child: TabBar(
+                    unselectedLabelColor: grey,
+                    isScrollable: true,
+                    padding: EdgeInsets.only(right: 20),
+                    controller: _tabController,
+                    indicatorColor: Colors.black,
+                    labelColor: Colors.black,
+                    dividerColor: Colors.transparent,
+                    tabs: [
+                      Tab(text: "To Do"),
+                      Tab(text: "History",),
+                    ],
                   ),
                 ),
                 //task title end here
@@ -203,19 +268,71 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           //list start here
-          Container(
-            child: Expanded(
-              child: ListView.builder(
-                itemCount: foundToDo.length,
-                itemBuilder: ((context, index) {
-                  return TodoTile(
-                    onPressed: (context) => deletetask(index),
-                    text: foundToDo[index][0],
-                    checked: foundToDo[index][1],
-                    onChanged: (value) => onchanged(value, index),
-                  );
-                }),
-              ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController ,
+              children: [
+                Container(
+                  child: ListView.builder(
+                    itemCount: foundToDo.length,
+                    itemBuilder: ((context, index) {
+                      return Container(
+                        margin: EdgeInsets.only(left: 10,right: 10,bottom: 20),
+                        child: TodoTile(
+                          edit: (context)=>edit(foundToDo[index][0],index),
+                          date: foundToDo[index][2],
+                          time: foundToDo[index][3],
+                          onPressed: (context) => deletetask(index),
+                          text: foundToDo[index][0],
+                          checked: foundToDo[index][1],
+                          onChanged: (value) => onchanged(value, index),
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+                ListView.builder(
+                  itemCount: done.length,
+                  itemBuilder: ((context, index) {
+                    return Container(
+                      // date: done[index][2],
+                      // time: done[index][3],
+                      margin: EdgeInsets.only(left: 10,right: 10,bottom: 20),
+                      child:Slidable(
+                        endActionPane: ActionPane(
+                          children: [
+                            //delete
+                            SlidableAction(
+                              padding: EdgeInsets.symmetric(vertical: 15, horizontal: 0),
+                              onPressed: (context)=>deletehis(index),
+                              icon: Icons.delete,
+                              backgroundColor: red,
+                              borderRadius: BorderRadius.only(
+                                  bottomRight: Radius.circular(10),
+                                  topRight: Radius.circular(10)),
+                            )
+                          ],
+                          motion: DrawerMotion(),
+                        ),
+                        closeOnScroll: true,
+                        child: ListTile(
+                          title: Text(done[index][0]),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                          tileColor: Colors.white,
+                          trailing: Icon(Icons.check_box_rounded,color: Colors.green,),
+                        ),
+                      ),
+
+                      // ListTile(
+                      //   title: Text(done[index][0]),
+                      //   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                      //   tileColor: Colors.white,
+                      //   trailing: Icon(Icons.check_box_rounded,color: Colors.green,),
+                      // ),
+                    );
+                  }),
+                ),
+              ],
             ),
           ),
         ],
