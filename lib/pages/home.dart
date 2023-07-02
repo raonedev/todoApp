@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:hive/hive.dart';
@@ -9,7 +10,6 @@ import '../wigets/todo_tile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
-
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
   List foundToDo = [];
   List done = [];
   List notdone = [];
-  DateTime _currentDate = DateTime.now();
+
   ToDoClass db = ToDoClass();
   TextEditingController title = TextEditingController();
   TextEditingController subtitle = TextEditingController();
@@ -36,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
     return -1;
   }
 
-  //ondelete history
+  //delete history
   void deletehis(int index){
     print("index");
     setState(() {
@@ -48,7 +48,8 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
     });
     db.UpdatData();
   }
-  //checkedbox changed
+
+  //checkbox changed
   void onchanged(bool? value, int index) {
     setState(() {
       int temp = findIndexStrict(db.tododata, foundToDo[index][0]);
@@ -63,6 +64,7 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
 
   //create a new task
   void showdialog() {
+    DateTime _currentDate = DateTime.now();
     showDialog(
         context: context,
         builder: (context) {
@@ -73,7 +75,7 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
               setState(() {
                 db.tododata.add([title.text,false,
                   _currentDate.day.toString() +"/" +_currentDate.month.toString(),
-                  _currentDate.hour.toString() +"/" +_currentDate.minute.toString()
+                  _currentDate.hour.toString() +":" +_currentDate.minute.toString()
                 ]);
                 notdone.add([title.text,false,
                   _currentDate.day.toString() +"/" +_currentDate.month.toString(),
@@ -96,11 +98,45 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
 
   //deleting a task
   void deletetask(int index) {
-    setState(() {
-      db.tododata.removeAt(index);
-      notdone.removeAt(index);
+    print("delete");
+    showDialog(context: context, builder: (context){
+      return CupertinoAlertDialog(
+        insetAnimationCurve: Curves.bounceInOut,
+        insetAnimationDuration: Duration(seconds: 2),
+        title: Text("Delete a task"),
+        content: Card(
+          color: Colors.transparent,
+          elevation: 0.0,
+          child: Text("are you sure ?"),
+        ),
+        actions: [
+          CupertinoDialogAction(
+              child: Text("Yes",style: TextStyle(color: red),),
+              onPressed: (){
+                print("yes");
+                setState(() {
+                  db.tododata.removeAt(index);
+                  notdone.removeAt(index);
+                });
+                db.UpdatData();
+                Navigator.pop(context);
+              }
+          ),
+          CupertinoDialogAction(
+            child: Text("no",style: TextStyle(color: Colors.blue),),
+            onPressed:()=> Navigator.pop(context),
+          ),
+        ],
+        // insetPadding: EdgeInsets.all(20),
+        // contentPadding: EdgeInsets.all(20),
+      );
     });
-    db.UpdatData();
+
+    // setState(() {
+    //   db.tododata.removeAt(index);
+    //   notdone.removeAt(index);
+    // });
+    // db.UpdatData();
   }
 
   //searching a task
