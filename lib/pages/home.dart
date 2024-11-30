@@ -127,16 +127,9 @@ class _HomeScreenState extends State<HomeScreen>  with SingleTickerProviderState
             onPressed:()=> Navigator.pop(context),
           ),
         ],
-        // insetPadding: EdgeInsets.all(20),
-        // contentPadding: EdgeInsets.all(20),
       );
     });
 
-    // setState(() {
-    //   db.tododata.removeAt(index);
-    //   notdone.removeAt(index);
-    // });
-    // db.UpdatData();
   }
 
   //searching a task
